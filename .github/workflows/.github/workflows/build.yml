@@ -1,0 +1,189 @@
+name: Build LSPosed APK
+
+on: [push]
+
+jobs:
+  build:
+      runs-on: ubuntu-latest
+
+      steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+
+      - name: Create Project Structure
+        run: |
+          mkdir -p app/src/main/java/com/deephat/oneteambypass
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/assets
+
+          cat << 'EOF' > settings.gradle
+          rootProject.name = "OneTeamBypass"
+          include ':app'
+          EOF
+
+          cat << 'EOF' > build.gradle
+          buildscript {
+              repositories { google(); mavenCentral() }
+              dependencies { classpath 'com.android.tools.build:gradle:8.1.1' }
+          }
+          allprojects {
+              repositories { google(); mavenCentral(); maven { url 'https://api.xposed.info/' } }
+          }
+          EOF
+
+          cat << 'EOF' > gradle.properties
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          EOF
+
+          cat << 'EOF' > app/build.gradle
+          plugins { id 'com.android.application' }
+          android {
+              namespace 'com.deephat.oneteambypass'
+              compileSdk 33
+              defaultConfig {
+                  applicationId "com.deephat.oneteambypass"
+                  minSdk 23
+                  targetSdk 33
+                  versionCode 1
+                  versionName "1.0"
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          dependencies {
+              compileOnly 'de.robv.android:xposedbridge:82'
+              implementation 'com.facebook.react:react-native:0.73.0'
+          }
+          EOF
+
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.deephat.oneteambypass">
+              <application android:label="OneTeam Bypass">
+                  <meta-data android:name="xposedmodule" android:value="true" />
+                  <meta-data android:name="xposedid" android:value="com.deephat.oneteambypass" />
+                  <meta-data android:name="xposeddescription" android:value="Bypasses DeveloperModeModule" />
+                  <meta-data android:name="xposedauthor" android:value="DeepHat" />
+                  <meta-data android:name="xposedminversion" android:value="93" />
+                  <meta-data android:name="xposedscope" android:value="com.kpitb.oneteam" />
+                  <activity android:name=".MainActivity" android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/values/strings.xml
+          <resources><string name="app_name">OneTeam Bypass</string></resources>
+          EOF
+
+          cat << 'EOF' > app/src/main/java/com/deephat/oneteambypass/MainActivity.java
+          package com.deephat.oneteambypass;
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.widget.TextView;
+          public class MainActivity extends Activity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  TextView tv = new TextView(this);
+                  tv.setText("OneTeam Bypass Active");
+                  setContentView(tv);
+              }
+          }
+          EOF
+
+          cat << 'EOF' > app/src/main/java/com/deephat/oneteambypass/XposedInit.java
+          package com.deephat.oneteambypass;
+          import de.robv.android.xposed.IXposedHookLoadPackage;
+          import de.robv.android.xposed.XC_MethodHook;
+          import de.robv.android.xposed.XposedHelpers;
+          import de.robv.android.xposed.callbacks.XC_LoadPackage;
+          public class XposedInit implements IXposedHookLoadPackage {
+              @Override
+              public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
+                  if (!"com.kpitb.oneteam".equals(lpparam.packageName)) return;
+                  try {
+                      Class<?> devModuleClass = XposedHelpers.findClassIfExists("com.kpitb.oneteam.DeveloperModeModule", lpparam.classLoader);
+                      if (devModuleClass != null) {
+                          String[] methodsToResolveFalse = {
+                              "isDeviceRooted", "hasFakeGpsAppInstalled", "isMockLocationAppSet",
+                              "detectEmulator", "detectVirtualEnvironment", "hasSuspiciousAccessibility",
+                              "detectHookFrameworks", "isDebuggerAttached", "isAdbEnabled",
+                              "isAirplaneModeOn", "isVpnActive", "isSystemProxySet", "isDevOptionsEnabled"
+                          };
+                          for (String methodName : methodsToResolveFalse) {
+                              try {
+                                  XposedHelpers.findAndHookMethod(devModuleClass, methodName, Object.class, new XC_MethodHook() {
+                                      @Override
+                                      protected void beforeHookedMethod(MethodHookParam param) {
+                                          Object promise = param.args[0];
+                                          if (promise != null) {
+                                              XposedHelpers.callMethod(promise, "resolve", false);
+                                              param.setResult(null);
+                                          }
+                                      }
+                                  });
+                              } catch (Throwable ignored) {}
+                          }
+                          try {
+                              XposedHelpers.findAndHookMethod(devModuleClass, "getSecurityStatus", Object.class, new XC_MethodHook() {
+                                  @Override
+                                  protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                                      Object promise = param.args[0];
+                                      if (promise != null) {
+                                          Class<?> mapClass = Class.forName("com.facebook.react.bridge.WritableNativeMap", false, lpparam.classLoader);
+                                          Object map = mapClass.getDeclaredConstructor().newInstance();
+                                          String[] keys = {"isRooted", "isEmulator", "isFakeGps", "isVirtualApp", "isDebuggerAttached", "isAdbEnabled", "isMockLocation", "isHooked"};
+                                          for (String key : keys) {
+                                              XposedHelpers.callMethod(map, "putBoolean", key, false);
+                                          }
+                                          XposedHelpers.callMethod(promise, "resolve", map);
+                                          param.setResult(null);
+                                      }
+                                  }
+                              });
+                          } catch (Throwable ignored) {}
+                      }
+                  } catch (Throwable ignored) {}
+                  try {
+                      XposedHelpers.findAndHookMethod("android.location.LocationManager", lpparam.classLoader, "isProviderEnabled", String.class, new XC_MethodHook() {
+                          @Override
+                          protected void beforeHookedMethod(MethodHookParam param) {
+                              if ("mock".equals(param.args[0])) param.setResult(false);
+                          }
+                      });
+                  } catch (Throwable ignored) {}
+              }
+          }
+          EOF
+
+          cat << 'EOF' > app/src/main/assets/xposed_init
+          com.deephat.oneteambypass.XposedInit
+          EOF
+
+      - name: Build APK with Gradle
+        run: |
+          chmod +x gradlew || true
+          gradle wrapper --gradle-version=8.2
+          ./gradlew assembleDebug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: OneTeamBypass
+          path: app/build/outputs/apk/debug/app-debug.apk
