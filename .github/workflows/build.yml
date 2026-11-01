@@ -19,6 +19,9 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v4
 
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+
     - name: Create Project Structure and Source Files
       run: |
         mkdir -p app/src/main/java/com/deephat/oneteambypass
@@ -203,7 +206,7 @@ jobs:
         EOF
 
     - name: Initialize Gradle Wrapper
-      run: gradle wrapper --gradle-version=8.5 --distribution-type=bin
+      run: gradle wrapper --gradle-version=8.5
 
     - name: Build APK with Gradle Wrapper
       run: ./gradlew assembleDebug --no-daemon
