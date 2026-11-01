@@ -88,7 +88,7 @@ jobs:
         EOF
 
         cat << 'EOF' > app/src/main/AndroidManifest.xml
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.deephat.oneteambypass">
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <application android:label="OneTeam Bypass">
                 <meta-data android:name="xposedmodule" android:value="true" />
                 <meta-data android:name="xposedid" android:value="com.deephat.oneteambypass" />
