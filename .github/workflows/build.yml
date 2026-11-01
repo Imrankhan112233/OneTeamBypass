@@ -21,6 +21,8 @@ jobs:
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.5'
 
     - name: Create Project Structure and Files
       run: |
@@ -211,13 +213,10 @@ jobs:
         com.deephat.oneteambypass.XposedInit
         EOF
 
-    - name: Generate Wrapper & Build APK
-      uses: gradle/actions/setup-gradle@v3
-      with:
-        gradle-version: '8.5'
+        gradle wrapper --gradle-version=8.5
 
-    - name: Execute Gradle Build
-      run: gradle assembleDebug --stacktrace --no-daemon
+    - name: Build APK with Wrapper
+      run: ./gradlew assembleDebug --stacktrace --no-daemon
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
