@@ -19,12 +19,14 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v4
 
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+
     - name: Create Project Structure and Files
       run: |
         mkdir -p app/src/main/java/com/deephat/oneteambypass
         mkdir -p app/src/main/res/values
         mkdir -p app/src/main/assets
-        mkdir -p gradle/wrapper
 
         cat << 'EOF' > settings.gradle
         rootProject.name = "OneTeamBypass"
@@ -53,16 +55,6 @@ jobs:
         cat << 'EOF' > gradle.properties
         org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
         android.useAndroidX=true
-        EOF
-
-        cat << 'EOF' > gradle/wrapper/gradle-wrapper.properties
-        distributionBase=GRADLE_USER_HOME
-        distributionPath=wrapper/dists
-        distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
-        networkTimeout=10000
-        validateDistributionUrl=true
-        zipStoreBase=GRADLE_USER_HOME
-        zipStorePath=wrapper/dists
         EOF
 
         cat << 'EOF' > app/build.gradle
@@ -219,20 +211,13 @@ jobs:
         com.deephat.oneteambypass.XposedInit
         EOF
 
-        # Write robust standard gradlew script
-        cat << 'EOF' > gradlew
-        #!/usr/bin/env sh
-        APP_HOME="$(cd "$(dirname "$0")" && pwd -P)"
-        CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
-        exec "$JAVACMD" -Xmx64m -Xms64m -cp "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
-        EOF
-        chmod +x gradlew
+    - name: Generate Wrapper & Build APK
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.5'
 
-    - name: Download Gradle Wrapper JAR
-      run: curl -sLo gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar
-
-    - name: Build APK Cleanly
-      run: ./gradlew assembleDebug --stacktrace --no-daemon
+    - name: Execute Gradle Build
+      run: gradle assembleDebug --stacktrace --no-daemon
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
