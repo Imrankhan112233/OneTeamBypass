@@ -219,11 +219,17 @@ jobs:
         com.deephat.oneteambypass.XposedInit
         EOF
 
-    - name: Download Gradle Wrapper Components
-      run: |
-        curl -sLo gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar
-        curl -sLo gradlew https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradlew
+        # Write robust standard gradlew script
+        cat << 'EOF' > gradlew
+        #!/usr/bin/env sh
+        APP_HOME="$(cd "$(dirname "$0")" && pwd -P)"
+        CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
+        exec "$JAVACMD" -Xmx64m -Xms64m -cp "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
+        EOF
         chmod +x gradlew
+
+    - name: Download Gradle Wrapper JAR
+      run: curl -sLo gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar
 
     - name: Build APK Cleanly
       run: ./gradlew assembleDebug --stacktrace --no-daemon
