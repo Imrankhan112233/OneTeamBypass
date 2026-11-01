@@ -202,15 +202,14 @@ jobs:
         com.deephat.oneteambypass.XposedInit
         EOF
 
-    - name: Generate Gradle Wrapper with Gradle 8.5
-      run: gradle wrapper --gradle-version=8.5
+    - name: Initialize Gradle Wrapper
+      run: gradle wrapper --gradle-version=8.5 --distribution-type=bin
 
     - name: Build APK with Gradle Wrapper
-      run: ./gradlew assembleDebug
+      run: ./gradlew assembleDebug --no-daemon
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: OneTeamBypass
         path: app/build/outputs/apk/debug/app-debug.apk
-        
