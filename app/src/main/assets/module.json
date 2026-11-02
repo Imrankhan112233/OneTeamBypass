@@ -1,1 +1,11 @@
 
+{
+  "name": "OneTeam Bypass",
+  "version": 1,
+  "versionName": "1.0",
+  "author": "DeepHat",
+  "entry": "com.deephat.oneteambypass.MainActivity",
+  "minAPI": 24,
+  "required": true,
+  "scopes": ["com.kpitb.oneteam"]
+}
