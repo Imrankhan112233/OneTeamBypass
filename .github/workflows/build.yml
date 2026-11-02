@@ -19,12 +19,126 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v4
 
+    - name: Install Gradle
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.5'
+
     - name: Create Project Structure and Files
       run: |
-        # ... (your existing file creation commands here) ...
-        
-        # IMPORTANT: Add module.json if using LSPosed
+        mkdir -p app/src/main/java/com/deephat/oneteambypass
+        mkdir -p app/src/main/res/values
         mkdir -p app/src/main/assets
+
+        # settings.gradle
+        cat << 'EOF' > settings.gradle
+        rootProject.name = "OneTeamBypass"
+        include ':app'
+        EOF
+
+        # build.gradle (Project-level)
+        cat << 'EOF' > build.gradle
+        buildscript {
+            repositories {
+                google()
+                mavenCentral()
+                maven { url 'https://api.xposed.info/' }
+            }
+            dependencies {
+                classpath 'com.android.tools.build:gradle:8.2.0'
+            }
+        }
+        allprojects {
+            repositories {
+                google()
+                mavenCentral()
+                maven { url 'https://api.xposed.info/' }
+            }
+        }
+        EOF
+
+        # gradle.properties
+        cat << 'EOF' > gradle.properties
+        org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+        android.useAndroidX=true
+        EOF
+
+        # app/build.gradle
+        cat << 'EOF' > app/build.gradle
+        plugins {
+            id 'com.android.application'
+        }
+
+        android {
+            namespace 'com.deephat.oneteambypass'
+            compileSdk 34
+
+            defaultConfig {
+                applicationId "com.deephat.oneteambypass"
+                minSdk 24
+                targetSdk 34
+                versionCode 1
+                versionName "1.0"
+            }
+
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
+            }
+        }
+
+        dependencies {
+            compileOnly 'de.robv.android.xposed:api:82'
+        }
+        EOF
+
+        # AndroidManifest.xml
+        cat << 'EOF' > app/src/main/AndroidManifest.xml
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <application android:label="OneTeam Bypass">
+                <meta-data android:name="xposedmodule" android:value="true" />
+                <meta-data android:name="xposedid" android:value="com.deephat.oneteambypass" />
+                <meta-data android:name="xposeddescription" android:value="Bypasses DeveloperModeModule" />
+                <meta-data android:name="xposedauthor" android:value="DeepHat" />
+                <meta-data android:name="xposedminversion" android:value="93" />
+                <meta-data android:name="xposedscope" android:value="com.kpitb.oneteam" />
+                <activity android:name=".MainActivity" android:exported="true">
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN" />
+                        <category android:name="android.intent.category.LAUNCHER" />
+                    </intent-filter>
+                </activity>
+            </application>
+        </manifest>
+        EOF
+
+        # strings.xml
+        cat << 'EOF' > app/src/main/res/values/strings.xml
+        <resources>
+            <string name="app_name">OneTeam Bypass</string>
+        </resources>
+        EOF
+
+        # MainActivity.java
+        cat << 'EOF' > app/src/main/java/com/deephat/oneteambypass/MainActivity.java
+        package com.deephat.oneteambypass;
+
+        import android.app.Activity;
+        import android.os.Bundle;
+        import android.widget.TextView;
+
+        public class MainActivity extends Activity {
+            @Override
+            protected void onCreate(Bundle savedInstanceState) {
+                super.onCreate(savedInstanceState);
+                TextView tv = new TextView(this);
+                tv.setText("OneTeam Bypass Active");
+                setContentView(tv);
+            }
+        }
+        EOF
+
+        # module.json (Required for LSPosed)
         cat << 'EOF' > app/src/main/assets/module.json
         {
           "name": "OneTeam Bypass",
@@ -38,9 +152,9 @@ jobs:
         }
         EOF
 
-    - name: Generate Gradle Wrapper (if not present)
+    - name: Generate Gradle Wrapper
       run: |
-        ./gradlew wrapper --gradle-version 8.5 --distribution-type all || echo "Wrapper generation failed or not needed"
+        gradle wrapper --gradle-version 8.5
 
     - name: Build Debug APK
       run: |
