@@ -1,1 +1,3 @@
 
+rootProject.name = "OneTeamBypass"
+include ':app'
