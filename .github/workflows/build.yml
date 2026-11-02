@@ -92,8 +92,8 @@ jobs:
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <application android:label="OneTeam Bypass">
                   <meta-data android:name="xposedmodule" android:value="true" />
-                  <meta-data android:name="xposeddescription" android:value="Bypasses DeveloperModeModule" />
                   <meta-data android:name="xposedminversion" android:value="93" />
+                  <meta-data android:name="xposedscope" android:value="com.kpitb.oneteam" />
                   <activity android:name=".MainActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -111,15 +111,20 @@ jobs:
           </resources>
           EOF
 
-          # MainActivity.java
+          # MainActivity.java (Implements IXposedHookLoadPackage for LSPosed + Activity UI)
           cat << 'EOF' > app/src/main/java/com/deephat/oneteambypass/MainActivity.java
           package com.deephat.oneteambypass;
-          
+
           import android.app.Activity;
           import android.os.Bundle;
           import android.widget.TextView;
+          import de.robv.android.xposed.IXposedHookLoadPackage;
+          import de.robv.android.xposed.XC_MethodHook;
+          import de.robv.android.xposed.XposedBridge;
+          import de.robv.android.xposed.XposedHelpers;
+          import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
-          public class MainActivity extends Activity {
+          public class MainActivity extends Activity implements IXposedHookLoadPackage {
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
@@ -127,20 +132,39 @@ jobs:
                   tv.setText("OneTeam Bypass Active");
                   setContentView(tv);
               }
+
+              @Override
+              public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
+                  if (lpparam.packageName.equals("com.kpitb.oneteam")) {
+                      XposedBridge.log("OneTeamBypass: Hooked target package!");
+                      XposedHelpers.findAndHookMethod(
+                          "com.kpitb.oneteam.MainActivity", 
+                          lpparam.classLoader, 
+                          "onCreate", 
+                          android.os.Bundle.class, 
+                          new XC_MethodHook() {
+                              @Override
+                              protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                                  XposedBridge.log("OneTeamBypass: Bypassed Developer Mode check");
+                              }
+                          }
+                      );
+                  }
+              }
           }
           EOF
 
-          # module.json (Strictly formatted for LSPosed)
+          # module.json (Required for LSPosed)
           cat << 'EOF' > app/src/main/assets/module.json
           {
             "name": "OneTeam Bypass",
             "version": 1,
             "versionName": "1.0",
             "author": "DeepHat",
-            "description": "Bypasses DeveloperModeModule",
-            "minApi": 93,
-            "targetApi": 24,
-            "scope": ["com.kpitb.oneteam"]
+            "entry": "com.deephat.oneteambypass.MainActivity",
+            "minAPI": 24,
+            "required": true,
+            "scopes": ["com.kpitb.oneteam"]
           }
           EOF
 
